@@ -23,7 +23,7 @@ def classify_city(city):
     if pd.isna(city) or str(city).strip() == '':
         return "Other City"
     city = str(city).strip()
-       city_map = {
+    city_map = {
         "منطقة صباح السالم": {
             "صباح السالم","العدان","المسيلة","أبو فطيرة","أبو الحصانية",
             "مبارك الكبير","القصور","القرين","الفنيطيس","المسايل"
@@ -435,3 +435,4 @@ if uploaded_files:
                 mime="application/pdf",
                 key="download_pdf"
             )
+
