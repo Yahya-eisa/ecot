@@ -315,19 +315,7 @@ if uploaded_files:
             col = merged_df.pop('المنطقة')
             merged_df.insert(insert_position, 'المنطقة', col)
         
-        # ✅ ترتيب حسب المنطقة والأوردر
-        if 'المنطقة' in merged_df.columns:
-            merged_df['المنطقة'] = pd.Categorical(
-                merged_df['المنطقة'],
-                categories=[c for c in merged_df['المنطقة'].unique() if c != "Other City"] + ["Other City"],
-                ordered=True
-            )
-            if 'الرقم العشوائي' in merged_df.columns:
-                merged_df = merged_df.sort_values(['المنطقة','الرقم العشوائي'])
-            else:
-                merged_df = merged_df.sort_values(['المنطقة'])
-        
-        # ✅ تفريغ الخلايا المكررة
+        # ✅ تفريغ الخلايا المكررة (قبل الترتيب)
         cols_to_clear = [col for col in merged_df.columns if col not in ['اسم المنتج', 'كود الصنف', 'اللون', 'المقاس', 'الكمية', 'السعر', 'عموله الافيليت']]
         
         if 'الرقم العشوائي' in merged_df.columns:
@@ -338,6 +326,13 @@ if uploaded_files:
                     merged_df.loc[~merged_df['is_first'], col] = ''
             
             merged_df = merged_df.drop(columns=['is_first'])
+        
+        # ✅ ترتيب حسب المنطقة والأوردر (بعد التفريغ)
+        if 'المنطقة' in merged_df.columns:
+            if 'الرقم العشوائي' in merged_df.columns:
+                merged_df = merged_df.sort_values(['المنطقة','الرقم العشوائي'])
+            else:
+                merged_df = merged_df.sort_values(['المنطقة'])
         
         # ✅ إنشاء شيت المشتريات المجمعة
         if 'اسم المنتج' in merged_df.columns and 'الكمية' in merged_df.columns:
@@ -435,4 +430,3 @@ if uploaded_files:
                 mime="application/pdf",
                 key="download_pdf"
             )
-
