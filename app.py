@@ -23,7 +23,7 @@ def classify_city(city):
     if pd.isna(city) or str(city).strip() == '':
         return "Other City"
     city = str(city).strip()
-    city_map = {
+       city_map = {
         "منطقة صباح السالم": {
             "صباح السالم","العدان","المسيلة","أبو فطيرة","أبو الحصانية",
             "مبارك الكبير","القصور","القرين","الفنيطيس","المسايل"
@@ -134,8 +134,8 @@ def fill_down(series):
     return series.ffill()
 
 def df_to_pdf_table(df, title="ECOMERG", group_name=""):
-    if 'رقم موبايل العميل' in df.columns:
-        df['رقم موبايل العميل'] = df['رقم موبايل العميل'].apply(
+    if 'موبايل(1)' in df.columns:
+        df['موبايل(1)'] = df['موبايل(1)'].apply(
             lambda x: str(int(float(x))) if pd.notna(x) and str(x).replace('.','',1).isdigit()
             else ("" if pd.isna(x) else str(x))
         )
@@ -222,81 +222,136 @@ if uploaded_files:
     if all_frames:
         merged_df = pd.concat(all_frames, ignore_index=True, sort=False)
         
-        column_mapping = {
-            ' الرقم العشوائي': 'كود الاوردر',
-            'الإسم': 'اسم العميل',
-            'العنوان': 'العنوان',
-            'المدينة': 'المدينة',
-            'موبايل(1)': 'رقم موبايل العميل',
-            'حالة الاوردر': 'حالة الاوردر',
-            'ملاحظة الافيليت علي الطلب': 'الملاحظات',
-            'اسم المنتج': 'اسم الصنف',
-            'اللون': 'اللون',
-            'المقاس': 'المقاس',
-            'الكمية': 'الكمية',
-            'Total': 'الإجمالي مع الشحن'
-        }
+        # ✅ الترتيب الجديد للأعمدة
+        final_order = [
+            'رقم الاوردر',
+            'موظف المجموعة',
+            'حاله الحسابات',
+            'حالة الاوردر',
+            'نوع المرتجع',
+            'سبب المرتجع تربو',
+            'حاله التكرار',
+            'حالة الاوردر الفرعية',
+            'شركة الشحن',
+            'عمولة الافليتور',
+            'عمولة الموقع',
+            'Net',
+            'Total',
+            'الافيليت كود',
+            'اسم الصفحه',
+            'اسم المودريتور',
+            'الرقم العشوائي',
+            'رقم البوليصه',
+            'التاريخ',
+            'تاريخ الشحن',
+            'الوقت من الشحن',
+            'تاريخ التنفيذ',
+            'تاريخ اخر تحديث علي الاوردر',
+            'الإسم',
+            'موبايل(1)',
+            'موبايل(2)',
+            'العنوان',
+            'المحافظة',
+            'المدينة',
+            'رقم القطعة',
+            'المجموعة',
+            'الشحن',
+            'التسكين',
+            'الديزاينر',
+            'اخر ملاحظة على الاوردر',
+            'ملاحظة الافيليت علي الطلب',
+            'السبب',
+            'سبب الاستبدال او الاسترجاع',
+            'تاريخ تسليم الاوردر',
+            'اسم المنتج',
+            'كود الصنف',
+            'اللون',
+            'المقاس',
+            'الكمية',
+            'السعر',
+            'عموله الافيليت',
+            'التوريد الى التاجر',
+            'اسم التاجر',
+            'كود التاجر'
+        ]
         
-        merged_df = merged_df.rename(columns=column_mapping)
+        # ✅ ترتيب الأعمدة الموجودة فقط
+        available_cols = [col for col in final_order if col in merged_df.columns]
+        merged_df = merged_df[available_cols].copy()
         
-        required_cols = ['كود الاوردر', 'اسم العميل', 'العنوان', 'المدينة', 
-                        'رقم موبايل العميل', 'حالة الاوردر', 'الملاحظات', 
-                        'اسم الصنف', 'اللون', 'المقاس', 'الكمية', 'الإجمالي مع الشحن']
-        
-        merged_df = merged_df[[c for c in required_cols if c in merged_df.columns]].copy()
-        
+        # ✅ استبدال "معلق" بـ "تم التأكيد"
         merged_df = replace_muaaqal_with_confirm_safe(merged_df)
         
+        # ✅ Fill down للأعمدة الأساسية
         if 'المدينة' in merged_df.columns:
             merged_df['المدينة'] = merged_df['المدينة'].ffill().fillna('')
-        if 'كود الاوردر' in merged_df.columns:
-            merged_df['كود الاوردر'] = fill_down(merged_df['كود الاوردر'])
-        if 'اسم العميل' in merged_df.columns:
-            merged_df['اسم العميل'] = fill_down(merged_df['اسم العميل'])
+        if 'الرقم العشوائي' in merged_df.columns:
+            merged_df['الرقم العشوائي'] = fill_down(merged_df['الرقم العشوائي'])
+        if 'الإسم' in merged_df.columns:
+            merged_df['الإسم'] = fill_down(merged_df['الإسم'])
         
-        if 'المدينة' in merged_df.columns and 'اسم الصنف' in merged_df.columns:
-            prod_present = merged_df['اسم الصنف'].notna() & merged_df['اسم الصنف'].astype(str).str.strip().ne('')
+        # ✅ Fix للمدينة لو فاضية
+        if 'المدينة' in merged_df.columns and 'اسم المنتج' in merged_df.columns:
+            prod_present = merged_df['اسم المنتج'].notna() & merged_df['اسم المنتج'].astype(str).str.strip().ne('')
             city_empty = merged_df['المدينة'].isna() | merged_df['المدينة'].astype(str).str.strip().eq('')
             mask = prod_present & city_empty
             if mask.any():
                 city_ffill = merged_df['المدينة'].ffill()
                 merged_df.loc[mask, 'المدينة'] = city_ffill.loc[mask]
         
-        if 'كود الاوردر' in merged_df.columns and 'الكمية' in merged_df.columns:
+        # ✅ حساب عدد القطع لكل أوردر
+        if 'الرقم العشوائي' in merged_df.columns and 'الكمية' in merged_df.columns:
             merged_df['الكمية'] = pd.to_numeric(merged_df['الكمية'], errors='coerce').fillna(0)
-            order_total_qty = merged_df.groupby('كود الاوردر')['الكمية'].transform('sum')
-            merged_df.insert(7, 'عدد القطع', order_total_qty)
+            order_total_qty = merged_df.groupby('الرقم العشوائي')['الكمية'].transform('sum')
+            # إضافة عمود عدد القطع بعد حالة الاوردر
+            insert_position = merged_df.columns.get_loc('حالة الاوردر') + 1 if 'حالة الاوردر' in merged_df.columns else 0
+            merged_df.insert(insert_position, 'عدد القطع', order_total_qty)
         
-        merged_df['المنطقة'] = merged_df['المدينة'].apply(classify_city)
+        # ✅ إضافة عمود المنطقة
+        if 'المدينة' in merged_df.columns:
+            merged_df['المنطقة'] = merged_df['المدينة'].apply(classify_city)
+            # إضافة المنطقة بعد المدينة
+            insert_position = merged_df.columns.get_loc('المدينة') + 1
+            col = merged_df.pop('المنطقة')
+            merged_df.insert(insert_position, 'المنطقة', col)
         
-        final_order = ['كود الاوردر', 'اسم العميل', 'المنطقة', 'العنوان', 'المدينة',
-                      'رقم موبايل العميل', 'حالة الاوردر', 'عدد القطع', 'الملاحظات',
-                      'اسم الصنف', 'اللون', 'المقاس', 'الكمية', 'الإجمالي مع الشحن']
+        # ✅ ترتيب حسب المنطقة والأوردر
+        if 'المنطقة' in merged_df.columns:
+            merged_df['المنطقة'] = pd.Categorical(
+                merged_df['المنطقة'],
+                categories=[c for c in merged_df['المنطقة'].unique() if c != "Other City"] + ["Other City"],
+                ordered=True
+            )
+            if 'الرقم العشوائي' in merged_df.columns:
+                merged_df = merged_df.sort_values(['المنطقة','الرقم العشوائي'])
+            else:
+                merged_df = merged_df.sort_values(['المنطقة'])
         
-        merged_df = merged_df[[c for c in final_order if c in merged_df.columns]].copy()
+        # ✅ تفريغ الخلايا المكررة
+        cols_to_clear = [col for col in merged_df.columns if col not in ['اسم المنتج', 'كود الصنف', 'اللون', 'المقاس', 'الكمية', 'السعر', 'عموله الافيليت']]
         
-        merged_df['المنطقة'] = pd.Categorical(
-            merged_df['المنطقة'],
-            categories=[c for c in merged_df['المنطقة'].unique() if c != "Other City"] + ["Other City"],
-            ordered=True
-        )
-        merged_df = merged_df.sort_values(['المنطقة','كود الاوردر'])
-        
-        cols_to_clear = ['اسم العميل', 'العنوان', 'المدينة', 'رقم موبايل العميل', 
-                        'حالة الاوردر', 'عدد القطع', 'الملاحظات', 'الإجمالي مع الشحن']
-        
-        merged_df['is_first'] = ~merged_df.duplicated(subset=['كود الاوردر'], keep='first')
-        
-        for col in cols_to_clear:
-            if col in merged_df.columns:
-                merged_df.loc[~merged_df['is_first'], col] = ''
-        
-        merged_df = merged_df.drop(columns=['is_first'])
+        if 'الرقم العشوائي' in merged_df.columns:
+            merged_df['is_first'] = ~merged_df.duplicated(subset=['الرقم العشوائي'], keep='first')
+            
+            for col in cols_to_clear:
+                if col in merged_df.columns:
+                    merged_df.loc[~merged_df['is_first'], col] = ''
+            
+            merged_df = merged_df.drop(columns=['is_first'])
         
         # ✅ إنشاء شيت المشتريات المجمعة
-        products_df = merged_df.groupby(['اسم الصنف', 'اللون', 'المقاس'])['الكمية'].sum().reset_index()
-        products_df.columns = ['اسم الصنف', 'اللون', 'المقاس', 'إجمالي الكمية']
-        products_df = products_df.sort_values('إجمالي الكمية', ascending=False)
+        if 'اسم المنتج' in merged_df.columns and 'الكمية' in merged_df.columns:
+            group_cols = ['اسم المنتج']
+            if 'اللون' in merged_df.columns:
+                group_cols.append('اللون')
+            if 'المقاس' in merged_df.columns:
+                group_cols.append('المقاس')
+            
+            products_df = merged_df.groupby(group_cols)['الكمية'].sum().reset_index()
+            products_df.columns = group_cols + ['إجمالي الكمية']
+            products_df = products_df.sort_values('إجمالي الكمية', ascending=False)
+        else:
+            products_df = pd.DataFrame()
         
         # ============ الجزء الأول: تحميل الشيت للتعديل ============
         st.divider()
@@ -321,19 +376,20 @@ if uploaded_files:
         )
         
         # ✅ تحميل المشتريات بشكل منفصل
-        buffer_products = BytesIO()
-        products_df.to_excel(buffer_products, sheet_name='المشتريات', index=False, engine='openpyxl')
-        buffer_products.seek(0)
-        
-        file_name_products = f"المشتريات - {today}.xlsx"
-        
-        st.download_button(
-            label="🛒 تحميل المشتريات فقط",
-            data=buffer_products.getvalue(),
-            file_name=file_name_products,
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            key="download_products"
-        )
+        if not products_df.empty:
+            buffer_products = BytesIO()
+            products_df.to_excel(buffer_products, sheet_name='المشتريات', index=False, engine='openpyxl')
+            buffer_products.seek(0)
+            
+            file_name_products = f"المشتريات - {today}.xlsx"
+            
+            st.download_button(
+                label="🛒 تحميل المشتريات فقط",
+                data=buffer_products.getvalue(),
+                file_name=file_name_products,
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                key="download_products"
+            )
         
         # ============ الجزء الثاني: رفع الملف المعدّل وتقسيم المناطق ============
         st.divider()
@@ -379,4 +435,3 @@ if uploaded_files:
                 mime="application/pdf",
                 key="download_pdf"
             )
-
